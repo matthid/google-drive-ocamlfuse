@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+echo "xdg-open $@" >> /tmp/tmp_out.txt

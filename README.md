@@ -159,6 +159,57 @@ mounted filesystem.
 
 Note also that Google Documents will be exported read-only.
 
+### Docker usage
+
+1. Build container `docker build . -t $CONTAINER_IMAGE`
+2. Authorize (replace the variables, see related docs sections on how to create clientid/secret)
+   ```
+   docker run -ti --rm --name $CONTAINER_NAME-init \
+   -p 8080:8080 \
+   -p 8081:8081 \
+   -e INIT=true \
+   -e PUID=$PUID \
+   -e PGID=$PGID \
+   -e "CLIENT_ID=$CLIENT_ID" \
+   -e "CLIENT_SECRET=$CLIENT_SECRET" \
+   -v "$BASE_DIR/config":/config \
+   $CONTAINER_IMAGE
+   ```
+3. Run the container
+   ```
+   chown $PUID:$PGID $MOUNT_PATH
+   mount --bind $MOUNT_PATH $MOUNT_PATH
+   mount --make-shared $MOUNT_PATH
+   
+   docker run -d --name $CONTAINER_NAME --restart=unless-stopped \
+       --security-opt apparmor:unconfined \
+       --cap-add mknod \
+       --cap-add sys_admin \
+       --device=/dev/fuse \
+       -e PUID=$PUID \
+       -e PGID=$PGID \
+       -e MOUNT_OPTS=allow_other \
+       -v "$BASE_DIR/config":/config \
+       -v $MOUNT_PATH:/mnt/gdrive:shared \
+       $CONTAINER_IMAGE
+   ```
+4. Stop the container
+   ```
+   docker stop $CONTAINER_NAME || echo "Container not running?"
+   docker rm $CONTAINER_NAME || echo "Container not existing?"
+   while mount | grep $MOUNT_PATH; do
+     umount -f $MOUNT_PATH || echo "-> umount failed"
+     sleep 1
+   done
+   while [ -e $MOUNT_PATH ]; do
+     umount -f $MOUNT_PATH || echo "-> umount failed"
+     rmdir $MOUNT_PATH || echo "-> rmdir failed"
+     sleep 1
+   done
+   
+   mkdir $MOUNT_PATH
+   ```
+
 ### Support
 
 If you have questions, suggestions or want to report a problem, you may want
