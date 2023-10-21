@@ -16,7 +16,7 @@ let build_page title h3 body =
     title h3 body
 
 let start port =
-  let server = S.create ~port () in
+  let server = S.create ~port ~addr:"0.0.0.0" () in
   S.add_route_handler server
     S.Route.(exact "oauth2callback" @/ return)
     (fun req ->
